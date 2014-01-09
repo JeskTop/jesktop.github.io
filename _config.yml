@@ -1,19 +1,19 @@
-title:            Scribble
+title:            JeskTop
 description:      A jekyll theme. Because I scribble.
-url:              http://scribble.muan.co/
+url:              http://jesktop.github.io/
 signoff:          Mu-An
 disqus_shortname: muan
 facebook_appid:   604714799556697
 google_analytics: UA-21332781-7
 links: 
-  - name:         About
+  - name:         关于
     url:          /about
-  - name:         Blog
-    url:          http://muan.co
+  - name:         微薄
+    url:          http://weibo.com/jesktop
   - name:         Email
-    url:          mailto:hello@muan.co
+    url:          mailto:frayay@gmail.com
   - name:         GitHub
-    url:          http://github.com/muan
+    url:          http://github.com/jesktop
 
 pygments:         true
 permalink:        pretty
