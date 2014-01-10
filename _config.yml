@@ -10,13 +10,13 @@ links:
   - name:         About
     url:          /about
   - name:         Blog
-    url:          http://muan.co
+    url:          http://jesktop.github.io
     external:     true
   - name:         Email
-    url:          mailto:hello@muan.co
+    url:          mailto:frayay@gmail.com
     external:     true
   - name:         GitHub
-    url:          http://github.com/muan
+    url:          http://github.com/jesktop
     external:     true
 pygments:         true
 permalink:        pretty
