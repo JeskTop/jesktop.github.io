@@ -2,6 +2,7 @@
 layout: post
 title: 分享在Github上Star的项目（二）
 date: 2014-01-18 17:28:40
+disqus: y
 ---
 
 #Javascript
