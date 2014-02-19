@@ -6,3 +6,6 @@
 
 # Ignore bundler config.
 /.bundle
+
+# Ignore jekyll site
+/_site
