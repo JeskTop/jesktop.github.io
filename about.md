@@ -3,4 +3,5 @@ layout: page
 title: about
 ---
 
-You have a nice day. ♥
+*   前淘宝皇冠卖家
+*   现运营 [minnowlab.com](http://minnowlab.com)
