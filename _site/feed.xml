@@ -1,0 +1,746 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>JeskTop</title>
+    <description>A jekyll theme. Because I scribble.</description>
+    <link>http://jesktop.com/</link>
+    <atom:link href="http://jesktop.com//feed.xml" rel="self" type="application/rss+xml" />
+    
+      <item>
+        <title>如何创建动态表单</title>
+        <description>&lt;hr /&gt;
+
+&lt;h1&gt;介绍&lt;/h1&gt;
+
+&lt;p&gt;参考RailsCasts上的&lt;a href=&quot;http://railscasts.com/episodes/403-dynamic-forms&quot;&gt;403-dynamic-forms&lt;/a&gt;完成了一个动态表单，说一说整个过程。&lt;/p&gt;
+
+&lt;p&gt;动态表单是指用户可以自定义表单需要的内容，然后自己建立表单，让用户进行填写来收集自己需要收集的信息。典型的例子是“制作在线问卷调查”，例如：&lt;a href=&quot;https://www.jinshuju.net/&quot;&gt;金数据&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;根据RailsCasts上的流程，我根据视频上学到的内容使用&lt;code&gt;Rails4.03&lt;/code&gt;和&lt;code&gt;Ruby2.1&lt;/code&gt;完整的完成了一遍，对于表&lt;code&gt;(Product和ProductType)&lt;/code&gt;的CRUD操作均通过脚手架添加所以就不多贴代码，大概说说流程和思路。&lt;/p&gt;
+
+&lt;hr /&gt;
+
+&lt;h1&gt;添加Model&lt;/h1&gt;
+
+&lt;p&gt;添加整个动态表单需要用到的model，这里使用Product做介绍，需要3张表：&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;Product (字段：name:string，price:decimal，properties:text，product_type_id:integer)&lt;/li&gt;
+&lt;li&gt;ProductType (字段：name:string)&lt;/li&gt;
+&lt;li&gt;ProductField (字段：name:string，field_type:string，required:boolean，product_type_id:integer)&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;p&gt;Product是产品表，ProductType是动态表单的类型表（用户可以定义多种表单类型），ProductField是动态表单包含的信息（表单内需要填写的信息）。&lt;/p&gt;
+
+&lt;p&gt;ProductType和Porduct为一对一关系，而和ProductField则为一对多（一个表单内足以包含一种或更多的需要填写的信息内容）&lt;/p&gt;
+
+&lt;p&gt;ProductField的字段分别存入名称(name)、输入框的类型(field_type)和是否为必填字段(required)。&lt;/p&gt;
+
+&lt;p&gt;而动态表单的数据则存入Product的properties字段中，使用了Rails提供了serialize（序列化）存入数据表中，只需要在Product里添加的&lt;code&gt;serialize :properties, Hash&lt;/code&gt;即可把properties作为hash存入数据库中。&lt;/p&gt;
+
+&lt;blockquote&gt;&lt;p&gt;虽然序列化很方便可以让你储存任意的物件，但是缺点是序列化资料就失去了透过资料库查询索引的功效，你无法在SQL的where条件中指定序列化后的资料。&lt;/p&gt;&lt;/blockquote&gt;
+
+&lt;hr /&gt;
+
+&lt;h1&gt;创建ProductType时添加ProductField&lt;/h1&gt;
+
+&lt;h2&gt;ProductType Model设置&lt;/h2&gt;
+
+&lt;p&gt;我们需要在创建ProductType的同时添加ProductField，需要设置ProductField可通过ProductType进行添加，ProductType的Model代码如下：&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;ruby&quot;&gt;  &lt;span class=&quot;k&quot;&gt;class&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;ProductType&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;ActiveRecord&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Base&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;has_many&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:fields&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;class_name&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;ProductField&amp;quot;&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;accepts_nested_attributes_for&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:fields&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;allow_destroy&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kp&quot;&gt;true&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;通过&lt;code&gt;accepts_nested_attributes_for&lt;/code&gt;进行设置，可以点击查看文档&lt;a href=&quot;http://api.rubyonrails.org/classes/ActiveRecord/NestedAttributes/ClassMethods.html#method-i-accepts_nested_attributes_for&quot;&gt;accepts_nested_attributes_for&lt;/a&gt;。&lt;/p&gt;
+
+&lt;h2&gt;ProductType View设置&lt;/h2&gt;
+
+&lt;p&gt;因为在创建ProductType时添加ProductField，所以我们需要在ProductType的form中添加嵌入式的表单，并且需要动态添加操作，因为对于每个ProductType来说ProductField的数量是未知的，所以这里需要使用coffeescript在ProductType的&lt;code&gt;_form.html.erb&lt;/code&gt;中进行异步的增加和删除。整体操作分为3步:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;在&lt;code&gt;_form&lt;/code&gt;中添加创建ProductField的表单&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;p&gt;  新建&lt;code&gt;_field_fields.html.erb&lt;/code&gt;，加入ProductField需要添加的信息：&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;html&quot;&gt;  &lt;span class=&quot;nt&quot;&gt;&amp;lt;fieldset&amp;gt;&lt;/span&gt;
+    &lt;span class=&quot;err&quot;&gt;&amp;lt;&lt;/span&gt;%= f.select :field_type, %w[text_field check_box] %&amp;gt;  &lt;span class=&quot;c&quot;&gt;&amp;lt;!-- 提供添加&amp;quot;text_field&amp;quot;和&amp;quot;check_box&amp;quot;两种选择 --&amp;gt;&lt;/span&gt;
+    &lt;span class=&quot;err&quot;&gt;&amp;lt;&lt;/span&gt;%= f.text_field :name, placeholder: &amp;quot;field_name&amp;quot; %&amp;gt;
+    &lt;span class=&quot;err&quot;&gt;&amp;lt;&lt;/span&gt;%= f.check_box :required %&amp;gt; &lt;span class=&quot;err&quot;&gt;&amp;lt;&lt;/span&gt;%= f.label :required %&amp;gt;
+    &lt;span class=&quot;err&quot;&gt;&amp;lt;&lt;/span&gt;%= f.hidden_field :_destroy %&amp;gt;     &lt;span class=&quot;c&quot;&gt;&amp;lt;!-- accepts_nested_attributes_for的删除操作需要提供&amp;quot;_destroy&amp;quot; --&amp;gt;&lt;/span&gt;
+    &lt;span class=&quot;err&quot;&gt;&amp;lt;&lt;/span&gt;%= link_to &amp;quot;[remove]&amp;quot;, &amp;quot;#&amp;quot;, class: &amp;quot;remove_fields&amp;quot; %&amp;gt;
+  &lt;span class=&quot;nt&quot;&gt;&amp;lt;/fieldset&amp;gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;  在&lt;code&gt;_form.html.erb&lt;/code&gt;中加入&lt;code&gt;_field_fields.html.erb&lt;/code&gt;：&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;html&quot;&gt;  &lt;span class=&quot;err&quot;&gt;&amp;lt;&lt;/span&gt;%= form_for(@product_type) do |f| %&amp;gt;
+    ...
+    &lt;span class=&quot;err&quot;&gt;&amp;lt;&lt;/span&gt;%= f.fields_for :fields do |builder| %&amp;gt;
+      &lt;span class=&quot;err&quot;&gt;&amp;lt;&lt;/span&gt;%= render &amp;#39;field_fields&amp;#39;, f: builder %&amp;gt;
+    &lt;span class=&quot;err&quot;&gt;&amp;lt;&lt;/span&gt;% end %&amp;gt;
+    ...
+  &lt;span class=&quot;err&quot;&gt;&amp;lt;&lt;/span&gt;% end %&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;ul&gt;
+&lt;li&gt;添加动态添加和删除_field_fields的操作：&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;p&gt;  添加一个helper进行动态操作：&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;ruby&quot;&gt;  &lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;link_to_add_fields&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;name&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;f&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;association&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;new_object&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;f&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;object&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;send&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;association&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;klass&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;new&lt;/span&gt;     &lt;span class=&quot;c1&quot;&gt;#相当于ProductField.new&lt;/span&gt;
+    &lt;span class=&quot;nb&quot;&gt;id&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;new_object&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;object_id&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;fields&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;f&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;fields_for&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;association&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;new_object&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;child_index&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;builder&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;  
+      &lt;span class=&quot;n&quot;&gt;render&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;association&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;to_s&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;singularize&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;_fields&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;f&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;builder&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;link_to&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;name&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&amp;#39;#&amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;class&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;add_fields&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;data&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;fields&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;fields&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;gsub&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\n&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&amp;quot;&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)})&lt;/span&gt;  &lt;span class=&quot;c1&quot;&gt;#把需要添加的html加入该链接的data-fields中&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;  &lt;a href=&quot;http://api.rubyonrails.org/classes/ActionView/Helpers/FormHelper.html#method-i-fields_for&quot;&gt;fields_for文档&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;  在&lt;code&gt;_form.html.erb&lt;/code&gt;添加link_to_add_fields如：&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;html&quot;&gt;  &lt;span class=&quot;err&quot;&gt;&amp;lt;&lt;/span&gt;%= link_to_add_fields &amp;quot;Add Field&amp;quot;, f, :fields %&amp;gt;  
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;  使用coffeescript对ProductField进行异步的添加和删除操作：&lt;/p&gt;
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;coffeescript&quot;&gt;  &lt;span class=&quot;nx&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;document&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;).&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;on&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&amp;#39;click&amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&amp;#39;form .remove_fields&amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;(event) -&amp;gt;&lt;/span&gt;    &lt;span class=&quot;c1&quot;&gt;#把_destroy设置为1，并且隐藏fieldset&lt;/span&gt;
+    &lt;span class=&quot;nx&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;this&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;).&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;prev&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;#39;input[type=hidden]&amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;).&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;val&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;#39;1&amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;nx&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;this&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;).&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;closest&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;#39;fieldset&amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;).&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;hide&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+    &lt;span class=&quot;nx&quot;&gt;event&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;preventDefault&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+  
+  &lt;span class=&quot;nx&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;document&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;).&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;on&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&amp;#39;click&amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&amp;#39;form .add_fields&amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;(event) -&amp;gt;&lt;/span&gt;     &lt;span class=&quot;c1&quot;&gt;#把data-fields的信息，插入form中&lt;/span&gt;
+    &lt;span class=&quot;nv&quot;&gt;time = &lt;/span&gt;&lt;span class=&quot;k&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;Date&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;().&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;getTime&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt; 
+    &lt;span class=&quot;nv&quot;&gt;regexp = &lt;/span&gt;&lt;span class=&quot;k&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;RegExp&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;this&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;).&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;data&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;#39;id&amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&amp;#39;g&amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;nx&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;this&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;).&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;before&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;this&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;).&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;data&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;#39;fields&amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;).&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;replace&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;regexp&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;time&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;))&lt;/span&gt;
+    &lt;span class=&quot;nx&quot;&gt;event&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;preventDefault&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;ul&gt;
+&lt;li&gt;controller中加入嵌套表单的参数保护（白名单）：&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;ruby&quot;&gt;  &lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;product_type_params&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;params&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;require&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:product_type&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;permit&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:name&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;tap&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;whitelisted&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;whitelisted&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:fields_attributes&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;params&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:product_type&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;][&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:fields_attributes&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;hr /&gt;
+
+&lt;h1&gt;在Product使用ProductType&lt;/h1&gt;
+</description>
+        <pubDate>Wed, 19 Feb 2014 13:38:21 +0000</pubDate>
+        <link>http://jesktop.com//2014/02/19/dynamic-forms/</link>
+        <guid isPermaLink="true">http://jesktop.com//2014/02/19/dynamic-forms/</guid>
+      </item>
+    
+      <item>
+        <title>分享在Github上Star的项目（二）</title>
+        <description>&lt;h1&gt;Javascript&lt;/h1&gt;
+
+&lt;hr /&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/stripe/shop&quot; title=&quot;shop&quot;&gt;stripe / shop&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;Single-page shop   &lt;br/&gt;
+Demo: &lt;a href=&quot;https://shop-demo.parseapp.com/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/needim/noty&quot; title=&quot;noty&quot;&gt;goodybag / bootstrap-notify&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;noty - jquery notification plugin 消息通知  &lt;br/&gt;
+Demo: &lt;a href=&quot;http://ned.im/noty/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/pornel/slip&quot; title=&quot;slip&quot;&gt;pornel / slip&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;UI library用于通过滑动，拖动和手势操作列表&lt;br/&gt;
+Demo: &lt;a href=&quot;http://pornel.net/slip/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/madrobby/keymaster&quot; title=&quot;keymaster&quot;&gt;madrobby / keymaster&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;让键盘按键事件变的更简单&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/dmauro/Keypress&quot; title=&quot;Keypress&quot;&gt;dmauro / Keypress&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;A robust Javascript library for capturing keyboard input （键盘事件监听）&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/harvesthq/chosen&quot; title=&quot;chosen&quot;&gt;harvesthq / chosen&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;让你的Select可以进行搜索匹配&lt;br/&gt;
+Demo: &lt;a href=&quot;http://harvesthq.github.io/chosen/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/brianreavis/selectize.js&quot; title=&quot;selectize.js&quot;&gt;brianreavis / selectize.js&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;Selectize is the hybrid of a textbox and &amp;lsquo;select&amp;rsquo; box. It&amp;rsquo;s jQuery based and it has autocomplete and native-feeling keyboard navigation; useful for tagging, contact lists, etc. 让你的Select可以进行搜索匹配  &lt;br/&gt;
+Demo: &lt;a href=&quot;http://brianreavis.github.io/selectize.js/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/adobe/brackets&quot; title=&quot;brackets&quot;&gt;adobe / brackets&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;An open source code editor for the web, written in JavaScript, HTML and CSS.  &lt;br/&gt;
+Demo: &lt;a href=&quot;http://brackets.io/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/kenshin54/popline&quot; title=&quot;popline&quot;&gt;kenshin54 / popline&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;一个基于HTML5的富文本编辑器  &lt;br/&gt;
+Demo: &lt;a href=&quot;http://kenshin54.github.io/popline&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/tholman/zenpen&quot; title=&quot;zenpen&quot;&gt;tholman / zenpen&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;又一个基于HTML5的富文本编辑器  &lt;br/&gt;
+Demo: &lt;a href=&quot;http://www.zenpen.io/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/sofish/pen&quot; title=&quot;pen&quot;&gt;sofish / pen&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;又又一个基于HTML5的富文本编辑器 (+markdown)  &lt;br/&gt;
+Demo: &lt;a href=&quot;http://sofish.github.io/pen/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/mduvall/grande.js&quot; title=&quot;grande.js&quot;&gt;mduvall / grande.js&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;又又又一个基于HTML5的富文本编辑器   &lt;br/&gt;
+Demo: &lt;a href=&quot;http://mattduvall.com/grande.js/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/madebymany/sir-trevor-js&quot; title=&quot;sir-trevor-js&quot;&gt;madebymany / sir-trevor-js&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;一个稍微有点和上面推荐的富文本编辑器不一样的富文本编辑器   &lt;br/&gt;
+Demo: &lt;a href=&quot;http://madebymany.github.io/sir-trevor-js/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/xing/wysihtml5&quot; title=&quot;wysihtml5&quot;&gt;xing / wysihtml5&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;一个比较常见类型的富文本编辑器   &lt;br/&gt;
+Demo: &lt;a href=&quot;http://xing.github.io/wysihtml5/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/DrewDahlman/Mason&quot; title=&quot;Mason&quot;&gt;DrewDahlman / Mason&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;Mason.js for creating a perfect grid with jQuery. 一个使用js进行布局的jQuery插件&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/iamceege/tooltipster&quot; title=&quot;tooltipster&quot;&gt;iamceege / tooltipster&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;一个可以设置更多的tooltip&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/paulkinzett/toolbar&quot; title=&quot;toolbar&quot;&gt;paulkinzett / toolbar&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;按钮工具，点击按钮后，弹出 toolbar
+Demo: &lt;a href=&quot;http://paulkinzett.github.io/toolbar/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/heelhook/chardin.js&quot; title=&quot;chardin.js&quot;&gt;heelhook / chardin.js&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;添加覆盖层来介绍你产品的js插件 &lt;br/&gt;
+Demo: &lt;a href=&quot;http://heelhook.github.io/chardin.js/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/markdalgleish/bespoke.js&quot; title=&quot;bespoke.js&quot;&gt;markdalgleish / bespoke.js&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;类似图片轮换的可以用键盘操作移动小方块，并且有多种样式选择 &lt;br/&gt;
+Demo: &lt;a href=&quot;http://markdalgleish.com/projects/bespoke.js/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/usablica/intro.js&quot; title=&quot;intro.js&quot;&gt;usablica / intro.js&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;效果超赞的产品介绍方式，通过一步一步的点击向你的用户介绍你的产品&lt;br/&gt;
+Demo: &lt;a href=&quot;http://usablica.github.io/intro.js/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/kamens/jQuery-menu-aim&quot; title=&quot;jQuery-menu-aim&quot;&gt;kamens / jQuery-menu-aim&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;亚马逊的下拉菜单，当年号称用户体验最好的下拉菜单&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/acolangelo/jPanelMenu&quot; title=&quot;jPanelMenu&quot;&gt;acolangelo / jPanelMenu&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;把menu隐藏在侧边，类似手机app的左侧隐藏menu效果&lt;br/&gt;
+Demo: &lt;a href=&quot;http://jpanelmenu.com/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/artberri/sidr&quot; title=&quot;sidr&quot;&gt;artberri / sidr&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;把menu隐藏在侧边，和以上效果类似
+Demo: &lt;a href=&quot;http://www.berriart.com/sidr/#usage&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/nnnick/Chart.js&quot; title=&quot;Chart.js&quot;&gt;nnnick / Chart.js&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;Simple HTML5 Charts using the canvas tag&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/jaukia/zoomooz&quot; title=&quot;zoomooz&quot;&gt;jaukia / zoomooz&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;An easy-to-use jQuery plugin for making zooming web pages. &lt;br/&gt;
+点击查看zoom，放大显示进行查看。&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/bartaz/impress.js&quot; title=&quot;impress.js&quot;&gt;bartaz / impress.js&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;非常酷的效果，相信很多人都认识impress。&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/markdalgleish/stellar.js&quot; title=&quot;stellar.js&quot;&gt;markdalgleish / stellar.js&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;Stellar.js - Parallax scrolling made easy&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/lou/multi-select&quot; title=&quot;multi-select&quot;&gt;lou / multi-select&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;I&amp;rsquo;m a user-friendlier drop-in replacement for the standard select with multiple attribute activated.左右两列栏的多选框 &lt;br/&gt;
+Demo: &lt;a href=&quot;http://loudev.com/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/NUKnightLab/TimelineJS&quot; title=&quot;TimelineJS&quot;&gt;NUKnightLab / TimelineJS&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;TimelineJS: A Storytelling Timeline built in JavaScript.用js写的时间轴 &lt;br/&gt;
+Demo: &lt;a href=&quot;http://timeline.knightlab.com/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/rstacruz/nprogress&quot; title=&quot;nprogress&quot;&gt;rstacruz / nprogress&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;自定义进度条：For slim progress bars like on YouTube, Medium, etc   &lt;br/&gt;
+Demo: &lt;a href=&quot;http://ricostacruz.com/nprogress/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/HubSpot/pace&quot; title=&quot;pace&quot;&gt;HubSpot / pace&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;又一个自定义进度条：Automaticly add progress bars to your site.    &lt;br/&gt;
+Demo: &lt;a href=&quot;http://github.hubspot.com/pace/docs/welcome/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/HubSpot/offline&quot; title=&quot;offline&quot;&gt;HubSpot / offline&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;Automatically display online/offline indication to your users. （监听网络状态）   &lt;br/&gt;
+Demo: &lt;a href=&quot;http://github.hubspot.com/offline/docs/welcome/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/HubSpot/vex&quot; title=&quot;vex&quot;&gt;HubSpot / vex&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;A modern dialog library which is highly configurable and easy to style.  &lt;br/&gt;
+Demo: &lt;a href=&quot;http://github.hubspot.com/vex/docs/welcome/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/HubSpot/sortable&quot; title=&quot;sortable&quot;&gt;HubSpot / sortable&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;Drop-in script to make tables sortable.（排序，并且带有样式） &lt;br/&gt;
+Demo: &lt;a href=&quot;http://github.hubspot.com/sortable/docs/welcome/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/HubSpot/signet&quot; title=&quot;signet&quot;&gt;HubSpot / signet&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;Display a unique seal in the developer console of your page. （在console中显示信息） &lt;br/&gt;
+Demo: &lt;a href=&quot;http://github.hubspot.com/signet/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/simplefocus/FlowType.JS&quot; title=&quot;FlowType.JS&quot;&gt;simplefocus / FlowType.JS&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;可通过js自行调整文字大小和文字行间距  &lt;br/&gt;
+Demo: &lt;a href=&quot;http://simplefocus.com/flowtype/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/maccman/jquery.magicmove&quot; title=&quot;jquery.magicmove&quot;&gt;maccman / jquery.magicmove&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;Animate DOM transitions.    &lt;br/&gt;
+Demo: &lt;a href=&quot;http://maccman.github.io/jquery.magicmove/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/ichord/At.js&quot; title=&quot;At.js&quot;&gt;ichord / At.js&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;顾名思义：At.js  &lt;br/&gt;
+Demo: &lt;a href=&quot;http://ichord.github.io/At.js/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/aterrien/jQuery-Knob&quot; title=&quot;jQuery-Knob&quot;&gt;aterrien / jQuery-Knob&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;可通过鼠标滚动和调整的jQuery刻度盘  &lt;br/&gt;
+Demo: &lt;a href=&quot;http://anthonyterrien.com/knob/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/jackmoore/autosize&quot; title=&quot;autosize&quot;&gt;jackmoore / autosize&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;jQuery plugin for dynamic textarea sizing（textarea的size根据输入的内容多少自动调整）  &lt;br/&gt;
+Demo: &lt;a href=&quot;http://www.jacklmoore.com/autosize/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/matthewhudson/device.js&quot; title=&quot;device.js&quot;&gt;matthewhudson / device.js&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;判断用户使用的设备和类型  &lt;br/&gt;
+Demo: &lt;a href=&quot;http://matthewhudson.me/projects/device.js/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/ejci/favico.js&quot; title=&quot;favico.js&quot;&gt;ejci / favico.js&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;Make a use of your favicon with badges, images or videos  &lt;br/&gt;
+Demo: &lt;a href=&quot;http://lab.ejci.net/favico.js/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/maroslaw/rainyday.js&quot; title=&quot;rainyday.js&quot;&gt;maroslaw / rainyday.js&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;用js实现雨中玻璃窗上的效果  &lt;br/&gt;
+Demo: &lt;a href=&quot;http://maroslaw.github.io/rainyday.js/demo012_2.html&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/amoffat/bootstrap-application-wizard&quot; title=&quot;bootstrap-application-wizard&quot;&gt;amoffat / bootstrap-application-wizard&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;基于bootstrap的内容信息输入框，类似modal，但是功能更强大&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/marianoguerra/json.human.js&quot; title=&quot;json.human.js&quot;&gt;marianoguerra / json.human.js&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;Convert JSON to human readable HTML&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/inorganik/countUp.js&quot; title=&quot;countUp.js&quot;&gt;inorganik / countUp.js&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;Animates a numerical value from 0 to its value（动态计算数字）  &lt;br/&gt;
+Demo: &lt;a href=&quot;http://inorganik.github.io/countUp.js/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/taitems/iOS-Overlay&quot; title=&quot;iOS-Overlay&quot;&gt;taitems / iOS-Overlay&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;iOS-style overlays/notifications for the web（模仿iOS的通知）  &lt;br/&gt;
+Demo: &lt;a href=&quot;http://taitems.github.io/iOS-Overlay/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/luis-almeida/unveil&quot; title=&quot;unveil&quot;&gt;luis-almeida / unveil&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;A very lightweight jQuery plugin to lazy load images（延迟图片加载）  &lt;br/&gt;
+Demo: &lt;a href=&quot;http://luis-almeida.github.io/unveil/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/toddmotto/echo&quot; title=&quot;echo&quot;&gt;toddmotto / echo&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;Lazy-loading images with data-* attributes（延迟图片加载）  &lt;br/&gt;
+Demo: &lt;a href=&quot;http://toddmotto.com/labs/echo/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/clubdesign/floatlabels.js&quot; title=&quot;floatlabels.js&quot;&gt;clubdesign / floatlabels.js&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;Follows the famous Float Label Pattern. Built on jQuery.（很酷的input信息提示，错误提示等很适合用）  &lt;br/&gt;
+Demo: &lt;a href=&quot;http://clubdesign.github.io/floatlabels.js/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/duitang/waterfall&quot; title=&quot;waterfall&quot;&gt;duitang / waterfall&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;Solutions for Pinterestlike websites. (堆糖瀑布流)&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/desandro/masonry&quot; title=&quot;masonry&quot;&gt;desandro / masonry&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;Cascading grid layout library. (动态填充布局)    &lt;br/&gt;
+Demo: &lt;a href=&quot;http://masonry.desandro.com/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/desandro/isotope&quot; title=&quot;isotope&quot;&gt;desandro / isotope&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;An exquisite jQuery plugin for magical layouts. Enables filtering, sorting, and dynamic layouts. (动态填充布局)    &lt;br/&gt;
+Demo: &lt;a href=&quot;http://isotope.metafizzy.co/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/jalxob/cool-kitten&quot; title=&quot;cool-kitten&quot;&gt;jalxob / cool-kitten&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;A parallax scrolling responsive framework (响应试设计)   &lt;br/&gt;
+Demo: &lt;a href=&quot;http://www.jalxob.com/cool-kitten/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/HubSpot/odometer&quot; title=&quot;odometer&quot;&gt;HubSpot / odometer&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;Create an Apple-like one page scroller website (iPhone 5S website) with One Page Scroll plugin      &lt;br/&gt;
+Demo: &lt;a href=&quot;http://www.thepetedesign.com/demos/onepage_scroll_demo.html&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/alvarotrigo/fullPage.js&quot; title=&quot;fullPage.js&quot;&gt;alvarotrigo / fullPage.js&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;fullPage plugin by Alvaro Trigo. Create full screen pages fast and simple （OnePage网站）      &lt;br/&gt;
+Demo: &lt;a href=&quot;http://alvarotrigo.com/fullPage/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/LiranCohen/stickUp&quot; title=&quot;stickUp&quot;&gt;LiranCohen / stickUp&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;stickUp a jQuery Plugin for sticky navigation menus. （OnePage网站）      &lt;br/&gt;
+Demo: &lt;a href=&quot;http://lirancohen.github.io/stickUp/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/TryGhost/Ghost&quot; title=&quot;Ghost&quot;&gt;TryGhost / Ghost&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;Just a blogging platform&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/balanced/balanced-dashboard&quot; title=&quot;balanced-dashboard&quot;&gt;balanced / balanced-dashboard&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;The Balanced Dashboard, As an open company we want to put as much of our company in the public view as possible.      &lt;br/&gt;
+Demo: &lt;a href=&quot;https://dashboard.balancedpayments.com/#/login&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/scottjehl/Respond&quot; title=&quot;Respond&quot;&gt;scottjehl / Respond&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;A fast &amp;amp; lightweight polyfill for min/max-width CSS3 Media Queries (for IE 6-8, and more)&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/wellcaffeinated/PhysicsJS&quot; title=&quot;PhysicsJS&quot;&gt;wellcaffeinated / PhysicsJS&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;A modular, extendable, and easy-to-use physics engine for javascript（物理效果）        &lt;br/&gt;
+Demo: &lt;a href=&quot;http://wellcaffeinated.net/PhysicsJS/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/moot/riotjs&quot; title=&quot;riotjs&quot;&gt;moot / riotjs&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;The 1kb client side MVP library&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/SheetJS/js-xlsx&quot; title=&quot;js-xlsx&quot;&gt;SheetJS / js-xlsx&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;Javascript XLSX (Excel 2007+) parser and (one day) writer&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/firstopinion/formatter.js&quot; title=&quot;formatter.js&quot;&gt;firstopinion / formatter.js&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;Format html inputs to match a specified pattern（限制input输入格式）        &lt;br/&gt;
+Demo: &lt;a href=&quot;http://firstopinion.github.io/formatter.js/demos.html&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/jedrzejchalubek/Glide.js&quot; title=&quot;Glide.js&quot;&gt;jedrzejchalubek / Glide.js&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;Glide is responsive and touch-friendly jQuery &lt;em&gt;slider&lt;/em&gt;.         &lt;br/&gt;
+Demo: &lt;a href=&quot;http://jedrzejchalubek.com/glide/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/adobe-webplatform/Snap.svg&quot; title=&quot;Snap.svg&quot;&gt;adobe-webplatform / Snap.svg&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;The JavaScript library for modern SVG graphics.（一些用SVG画的图形）      &lt;br/&gt;
+Demo: &lt;a href=&quot;http://snapsvg.io/demos/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/RubaXa/jquery.fileapi&quot; title=&quot;jquery.fileapi&quot;&gt;RubaXa / jquery.fileapi&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;jQuery.FileAPI — jquery plugin for FileAPI （异步上传，并包含开启摄像头等功能）         &lt;br/&gt;
+Demo: &lt;a href=&quot;http://rubaxa.github.io/jquery.fileapi/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/meteor/meteor&quot; title=&quot;meteor&quot;&gt;meteor / meteor&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;Meteor, an ultra-simple, database-everywhere, data-on-the-wire, pure-Javascript web framework. &lt;em&gt;(web server)&lt;/em&gt; &lt;br/&gt;
+优酷视频教程: &lt;a href=&quot;http://v.youku.com/v_show/id_XNTYwMjc2MDA4.html&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/dmotz/oriDomi&quot; title=&quot;oriDomi&quot;&gt;dmotz / oriDomi&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;Fold up DOM elements like paper. （像纸一样折叠DOM）      &lt;br/&gt;
+Demo: &lt;a href=&quot;http://oridomi.com/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/hakimel/reveal.js&quot; title=&quot;reveal.js&quot;&gt;hakimel / reveal.js&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;The HTML Presentation Framework （Like PPT的演示框架）      &lt;br/&gt;
+Demo: &lt;a href=&quot;http://lab.hakim.se/reveal-js/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/javve/list.js&quot; title=&quot;list.js&quot;&gt;javve / list.js&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;The perfect library for adding search, sort, filters and flexibility to tables, lists and various HTML elements. Built to be invisible and work on existing HTML.          &lt;br/&gt;
+Demo: &lt;a href=&quot;http://www.listjs.com/examples&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/WickyNilliams/headroom.js&quot; title=&quot;headroom.js&quot;&gt;WickyNilliams / headroom.js&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;Give your pages some headroom. Hide your header until you need it. （隐藏header的nav）           &lt;br/&gt;
+Demo: &lt;a href=&quot;http://wicky.nillia.ms/headroom.js/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/Prinzhorn/skrollr&quot; title=&quot;skrollr&quot;&gt;Prinzhorn / skrollr&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;Stand-alone parallax scrolling library for mobile (Android + iOS) and desktop. No jQuery.               &lt;br/&gt;
+Demo: &lt;a href=&quot;http://prinzhorn.github.io/skrollr/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/barrel/mixitup&quot; title=&quot;mixitup&quot;&gt;barrel / mixitup&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;A CSS3 and jQuery Filter &amp;amp; Sort Plugin                &lt;br/&gt;
+Demo: &lt;a href=&quot;http://mixitup.io/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/briangonzalez/jquery.adaptive-backgrounds.js&quot; title=&quot;jquery.adaptive-backgrounds.js&quot;&gt;briangonzalez / jquery.adaptive-backgrounds.js&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;A jQuery plugin for extracting the dominant color from images and applying the color to their parent. （根据图片主色，设置其父亲对象的背景色）               &lt;br/&gt;
+Demo: &lt;a href=&quot;http://briangonzalez.github.io/jquery.adaptive-backgrounds.js/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/malihu/malihu-custom-scrollbar-plugin&quot; title=&quot;malihu-custom-scrollbar-plugin&quot;&gt;malihu / malihu-custom-scrollbar-plugin&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;jQuery custom scrollbar plugin utilizing jquery UI that&amp;rsquo;s fully customizable with CSS. Features vertical/horizontal scrolling, mouse-wheel support, scroll easing, adjustable scrollbar height/width etc.（右侧滚动条）&lt;/p&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+</description>
+        <pubDate>Sat, 18 Jan 2014 17:28:40 +0000</pubDate>
+        <link>http://jesktop.com//2014/01/18/share-starred-project-two/</link>
+        <guid isPermaLink="true">http://jesktop.com//2014/01/18/share-starred-project-two/</guid>
+      </item>
+    
+      <item>
+        <title>分享在Github上Star的项目（一）</title>
+        <description>&lt;h1&gt;CSS&lt;/h1&gt;
+
+&lt;hr /&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/h5bp/Effeckt.css&quot; title=&quot;Effeckt&quot;&gt;h5bp / Effeckt.css&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;使用CSS写的高性能转换和动画&lt;br/&gt;
+Demo: &lt;a href=&quot;http://h5bp.github.io/Effeckt.css/dist/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/jschr/textillate&quot; title=&quot;textillate&quot;&gt;jschr / textillate&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;A simple plugin for CSS3 text animations &lt;br/&gt;
+Demo: &lt;a href=&quot;http://jschr.github.io/textillate/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/jschr/textillate&quot; title=&quot;textillate&quot;&gt;daneden / animate.css&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;Cross-browser CSS3 animations. Plug and play. Do a little dance. &lt;br/&gt;
+Demo: &lt;a href=&quot;https://daneden.me/animate/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/InterNations/antwort&quot; title=&quot;antwort&quot;&gt;InterNations / antwort&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;Beautiful responsive email templates with code as beautiful as email templates can be&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/iurevych/Flat-UI&quot; title=&quot;Flat-UI&quot;&gt;iurevych / Flat-UI&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;Flat UI Free – Framework and Bootstrap Theme Design
+Demo: &lt;a href=&quot;http://designmodo.github.io/Flat-UI/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/goodybag/bootstrap-notify&quot; title=&quot;bootstrap-notify&quot;&gt;goodybag / bootstrap-notify&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;基于bootstrap的消息通知
+Demo: &lt;a href=&quot;http://goodybag.github.io/bootstrap-notify/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/ifightcrime/bootstrap-growl&quot; title=&quot;bootstrap-growl&quot;&gt;ifightcrime / bootstrap-growl&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;另一个基于bootstrap的消息通知
+Demo: &lt;a href=&quot;http://jsfiddle.net/ifightcrime/Us6WX/88/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/Wolfr/clank&quot; title=&quot;clank&quot;&gt;Wolfr / clank&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;open source prototyping framework for mobile apps（mobile apps的css framework）
+Demo: &lt;a href=&quot;http://getclank.com/demos/index.html&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/rstacruz/jquery.transit&quot; title=&quot;jquery.transit&quot;&gt;rstacruz / jquery.transit&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;Super-smooth CSS3 transformations and transitions for jQuery（使用css操作dom的移动动画） &lt;br/&gt;
+Demo: &lt;a href=&quot;http://ricostacruz.com/jquery.transit/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/rriepe/1pxdeep&quot; title=&quot;1pxdeep&quot;&gt;rriepe / 1pxdeep&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;Flat(ish) Bootstrap 3 theme.    &lt;br/&gt;
+Demo: &lt;a href=&quot;http://rriepe.github.io/1pxdeep/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/philipwalton/solved-by-flexbox&quot; title=&quot;solved-by-flexbox&quot;&gt;philipwalton / solved-by-flexbox&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;Cleaner, hack-free CSS 一个让CSS更清晰明了的方案，可是支持对浏览器要求较高。    &lt;br/&gt;
+Demo: &lt;a href=&quot;http://philipwalton.github.io/solved-by-flexbox/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/fronteed/iCheck&quot; title=&quot;iCheck&quot;&gt;fronteed / iCheck&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;让你的check和radio变的更美。    &lt;br/&gt;
+Demo: &lt;a href=&quot;http://fronteed.com/iCheck/#demo&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/peachananr/onepage-scroll&quot; title=&quot;onepage-scroll&quot;&gt;peachananr / onepage-scroll&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;让你的check和radio变的更美。    &lt;br/&gt;
+Demo: &lt;a href=&quot;http://fronteed.com/iCheck/#demo&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/BeSite/jQuery.mmenu&quot; title=&quot;jQuery.mmenu&quot;&gt;BeSite / jQuery.mmenu&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;A jQuery plugin that creates slick app look-alike sliding menus for your (mobile) website.    &lt;br/&gt;
+Demo: &lt;a href=&quot;http://mmenu.frebsite.nl/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/Pixelkit/PixelKit-Bootstrap-UI-Kits&quot; title=&quot;PixelKit-Bootstrap-UI-Kits&quot;&gt;Pixelkit / PixelKit-Bootstrap-UI-Kits&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;Free UI Kits built on Bootstrap for any developer that wants to build a cool looking and functional website. （很多免费的UI素材）    &lt;br/&gt;
+Demo: &lt;a href=&quot;http://pixelkit.com/free-ui-kits/modern-touch/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/IronSummitMedia/startbootstrap&quot; title=&quot;startbootstrap&quot;&gt;IronSummitMedia / startbootstrap&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;Better HTML Starter Templates for Bootstrap 3 （很多实用的bootstrap模板）   &lt;br/&gt;
+Demo: &lt;a href=&quot;http://startbootstrap.com&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/designmodo/startup-demo&quot; title=&quot;startup-demo&quot;&gt;designmodo / startup-demo&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;Demo Version of Startup Framework （很多实用的设计模板）   &lt;br/&gt;
+Demo: &lt;a href=&quot;http://designmodo.github.io/startup-demo/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/tobiasahlin/SpinKit&quot; title=&quot;SpinKit&quot;&gt;tobiasahlin / SpinKit&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;A collection of loading indicators animated with CSS （用CSS做的loading等待动画）   &lt;br/&gt;
+Demo: &lt;a href=&quot;http://tobiasahlin.com/spinkit/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/segmentio/myth&quot; title=&quot;myth&quot;&gt;segmentio / myth&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;A CSS preprocessor that acts like a polyfill for future versions of the spec.  &lt;br/&gt;
+Demo: &lt;a href=&quot;http://www.myth.io/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;h1&gt;Ruby or Rails&lt;/h1&gt;
+
+&lt;hr /&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/binarylogic/searchlogic&quot; title=&quot;searchlogic&quot;&gt;binarylogic / searchlogic&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;提供一种更便利清晰的搜索方式&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/fatfreecrm/fat_free_crm&quot; title=&quot;fat_free_crm&quot;&gt;fatfreecrm / fat_free_crm&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;Ruby on Rails CRM platform for Web 2.0&lt;br/&gt;
+Demo: &lt;a href=&quot;http://www.fatfreecrm.com&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/phatworx/easy_captcha&quot; title=&quot;easy_captcha&quot;&gt;phatworx / easy_captcha&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;Captcha-Plugin for Rails（Rails生成验证码）&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/rodreegez/powder&quot; title=&quot;powder&quot;&gt;rodreegez / powder&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;Pow是一个Rack server，powder让pow使用更方便&lt;br/&gt;
+pow: &lt;a href=&quot;https://github.com/37signals/pow&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/randym/axlsx&quot; title=&quot;axlsx&quot;&gt;randym / axlsx&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;可以更方便生成更多元化的excel表&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/smartinez87/exception_notification&quot; title=&quot;exception_notification&quot;&gt;smartinez87 / exception_notification&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;Exception Notifier Plugin for Rails(异常消息提醒)&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/ncuesta/dropzonejs-rails&quot; title=&quot;dropzonejs&quot;&gt;dropzonejs-rails&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;Rails gem，异步上传文件&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/collectiveidea/json_spec&quot; title=&quot;json_spec&quot;&gt;collectiveidea / json_spec&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;使用Rspec方便测试json输入&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/charlotte-ruby/impressionist&quot; title=&quot;impressionist&quot;&gt;charlotte-ruby / impressionist&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;Rails Plugin that tracks impressions and page views 保存日志&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/arvida/emoji-cheat-sheet.com&quot; title=&quot;emoji-cheat-sheet&quot;&gt;arvida / emoji-cheat-sheet.com&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;emoji-cheat-sheet&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/activerecord-hackery/ransack&quot; title=&quot;ransack&quot;&gt;activerecord-hackery / ransack&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;Object-based searching. With maintenance by @radar and @jonatack!&lt;br/&gt;
+pow: &lt;a href=&quot;http://ransack-demo.herokuapp.com/users/advanced_search&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/elabs/pundit&quot; title=&quot;pundit&quot;&gt;elabs / pundit&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;Minimal authorization through OO design and pure Ruby classes（类似CanCan的权限设置）&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/lassebunk/gretel&quot; title=&quot;gretel&quot;&gt;lassebunk / gretel&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;Flexible Ruby on Rails breadcrumbs plugin.（面包屑）&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/continuum/active_importer&quot; title=&quot;active_importer&quot;&gt;continuum / active_importer&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;Define importers that load tabular data from spreadsheets or CSV files into any ActiveRecord-like ORM.&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/andrewculver/koudoku&quot; title=&quot;koudoku&quot;&gt;andrewculver / koudoku&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;Robust subscription support for Ruby on Rails apps using Stripe, including out-of-the-box pricing pages, payment pages, and subscription management for your customers.  &lt;br/&gt;
+pow: &lt;a href=&quot;https://koudoku.herokuapp.com/pricing&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/37signals/local_time&quot; title=&quot;local_time&quot;&gt;37signals / local_time&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;Rails engine for client-side local time&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/sferik/t&quot; title=&quot;t&quot;&gt;sferik / t&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;A command-line power tool for Twitter.&lt;/p&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;h1&gt;Emberjs&lt;/h1&gt;
+
+&lt;hr /&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/GroupTalent/adminjs&quot; title=&quot;adminjs&quot;&gt;GroupTalent / adminjs&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;基于emberjs的一个多功能table，可是显示搜索，排序等功能。  &lt;br/&gt;
+Demo: &lt;a href=&quot;http://adminjs.com/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/simplabs/ember-simple-auth&quot; title=&quot;ember-simple-auth&quot;&gt;simplabs / ember-simple-auth&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;emberjs的登录验证&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/ghempton/ember-script&quot; title=&quot;ember-script&quot;&gt;ghempton / ember-script&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;Ember-infused CoffeeScript&lt;/p&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;h1&gt;Alfred&lt;/h1&gt;
+
+&lt;hr /&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/zenorocha/alfred-workflows&quot; title=&quot;alfred-workflows&quot;&gt;zenorocha / alfred-workflows&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;神器Alfred：A collection of Alfred 2 workflows that will rock your world.&lt;/p&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;h1&gt;Git&lt;/h1&gt;
+
+&lt;hr /&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/github/gitignore&quot; title=&quot;gitignore&quot;&gt;github / gitignore&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;A collection of useful .gitignore templates&lt;/p&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;h1&gt;收集&amp;amp;推荐优秀的 Apps (Mac OS &amp;amp; iOS)&lt;/h1&gt;
+
+&lt;hr /&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/hzlzh/Best-App&quot; title=&quot;Best-App&quot;&gt;hzlzh / Best-App&lt;/a&gt;&lt;/h2&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;h1&gt;API Documentation Browser&lt;/h1&gt;
+
+&lt;hr /&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/Thibaut/devdocs&quot; title=&quot;devdocs&quot;&gt;Thibaut / devdocs&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;API文档： &lt;a href=&quot;http://devdocs.io/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;h1&gt;Command line HTTP client&lt;/h1&gt;
+
+&lt;hr /&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/jkbr/httpie&quot; title=&quot;httpie&quot;&gt;jkbr / httpie&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;HTTPie is a CLI, cURL-like tool for humans.&lt;/p&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;h1&gt;HTML5 editor&lt;/h1&gt;
+
+&lt;hr /&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/jawerty/Hyro&quot; title=&quot;Hyro&quot;&gt;jawerty / Hyro&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;A real-time desktop HTML5 editor &amp;ndash; view your html while you code it.     &lt;br/&gt;
+Demo: &lt;a href=&quot;http://jawerty.github.io/Hyro/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;h1&gt;开源项目&lt;/h1&gt;
+
+&lt;hr /&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/maccman/monocle&quot; title=&quot;monocle&quot;&gt;maccman / monocle&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;Link and news sharing     &lt;br/&gt;
+Demo: &lt;a href=&quot;http://monocle.io/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;h1&gt;html email template&lt;/h1&gt;
+
+&lt;hr /&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/leemunroe/html-email-template&quot; title=&quot;html-email-template&quot;&gt;maccman / monocle&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;leemunroe / html-email-template&lt;/p&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+
+&lt;h1&gt;Markdown&lt;/h1&gt;
+
+&lt;hr /&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/vmg/redcarpet&quot; title=&quot;redcarpet&quot;&gt;vmg / redcarpet&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;The safe Markdown parser, reloaded.  Markdown解析工具&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/benweet/stackedit&quot; title=&quot;stackedit&quot;&gt;benweet / stackedit&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;The Markdown editor powered by PageDown      &lt;br/&gt;
+Demo: &lt;a href=&quot;https://stackedit.io/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/bergie/hallo&quot; title=&quot;hallo&quot;&gt;bergie / hallo&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;Simple rich text editor (contentEditable) for jQuery UI     &lt;br/&gt;
+Demo: &lt;a href=&quot;http://hallojs.org/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/evilstreak/markdown-js&quot; title=&quot;markdown-js&quot;&gt;evilstreak / markdown-js&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;A Markdown parser for javascript&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h2&gt;&lt;a href=&quot;https://github.com/OscarGodson/EpicEditor&quot; title=&quot;EpicEditor&quot;&gt;OscarGodson / EpicEditor&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;EpicEditor is an embeddable JavaScript Markdown editor with split fullscreen editing, live previewing, automatic draft saving, offline support, and more.    &lt;br/&gt;
+Demo: &lt;a href=&quot;http://epiceditor.com/&quot;&gt;查看&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+</description>
+        <pubDate>Sat, 18 Jan 2014 17:27:31 +0000</pubDate>
+        <link>http://jesktop.com//2014/01/18/share-starred-project-one/</link>
+        <guid isPermaLink="true">http://jesktop.com//2014/01/18/share-starred-project-one/</guid>
+      </item>
+    
+  </channel>
+</rss>
