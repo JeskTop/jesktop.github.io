@@ -12,7 +12,7 @@ disqus: y
 
 动态表单是指用户可以自定义表单需要的内容，然后自己建立表单，让用户进行填写来收集自己需要收集的信息。典型的例子是“制作在线问卷调查”，例如：[金数据](https://www.jinshuju.net/)
 
-根据RailsCasts上的流程，我根据视频上学到的内容使用`Rails4.03`和`Ruby2.1`完整的完成了一遍，对于表`(Product和ProductType)`的CRUD操作均通过脚手架添加所以就不多贴代码，大概说说流程和思路。
+根据RailsCasts上的流程，我根据视频上学到的内容使用`Rails4.03`和`Ruby2.1`完整的完成了一遍，对于表(Product和ProductType)的CRUD操作均通过脚手架添加所以就不多贴代码，大概说说流程和思路。
 
 - - -
 #添加Model
@@ -129,3 +129,116 @@ ProductField的字段分别存入名称(name)、输入框的类型(field_type)�
  
 - - -       
 #在Product使用ProductType
+
+##创建Product时，选择ProductType类型
+在创建Product的form中，可以根据ProductType的id进行生成form的类型，所以添加一个`form_tag`：
+
+{% highlight html %}
+  <%= form_tag new_product_path, method: :get do %>
+    <%= select_tag :product_type_id, options_from_collection_for_select(ProductType.all, :id, :name) %>
+    <%= submit_tag "New Product" %>
+  <% end %>
+ {% endhighlight %}
+ 
+##在Product的_form中，根据选择的ProductType生成表单
+在`_form.html.erb`中添加：
+
+{% highlight html %}
+  <%= f.fields_for :properties, OpenStruct.new(@product.properties) do |builder| %>
+    <% @product.product_type.fields.each do |field| %>
+      <%= render "products/fields/#{field.field_type}", field: field, f: builder %>
+    <% end %>
+  <% end %>
+{% endhighlight %}
+
+创建`products/fields/_check_box.html.erb`：
+
+{% highlight html %}
+  <div class="field">
+    <%= f.check_box field.name %>
+    <%= f.label field.name %>
+  </div>
+{% endhighlight %}
+
+创建`products/fields/_text_field.html.erb`：
+
+{% highlight html %}
+  <div class="field">
+    <%= f.label field.name %><br />
+    <%= f.text_field field.name %>
+  </div>
+{% endhighlight %}
+
+> About OpenStruct   
+> person = OpenStruct.new('name' => 'John Smith', 'age' => 70)   
+> person[:age] = 42 # => equivalent to ostruct.age = 42   
+> person.age # => 42
+
+##Product保存过程中，同时保存product_type_id
+
+在controller中，new方法下先建立product和product_type的关系：
+
+{% highlight ruby %}
+  def new
+    @product = Product.new(product_type_id: params[:product_type_id])
+  end
+{% endhighlight %}
+
+并且hidden在form中，create时一同创建：
+
+{% highlight html %}
+  <%= f.hidden_field :product_type_id %>
+{% endhighlight %}
+
+##controller中加入嵌套表单的参数保护（白名单）
+
+{% highlight ruby %}
+  def product_params
+    params.require(:product).permit(:name, :price, :product_type_id).tap do |whitelisted|
+      whitelisted[:properties] = params[:product][:properties]
+    end
+  end
+{% endhighlight %}
+
+##在Product的show页面中，显示product动态表里的信息：
+
+{% highlight html %}
+  <% @product.properties.each do |name, value| %>
+    <p>
+      <b><%= name.humanize %>:</b>
+      <%= value %>
+    </p>
+  <% end %>
+{% endhighlight %}
+
+- - -       
+#ProductType的必填项在Product form中生效
+
+剩下最后一步，当ProductType的`required`字段设置为true，则该项为必填字段，所以在新建Product的时候，应该对称进行限制，只需要添加一条validate即可：
+
+
+{% highlight ruby %}
+  class Product < ActiveRecord::Base
+    ...
+
+    validate :validate_properties
+    
+    def validate_properties
+      product_type.fields.each do |field|
+        if field.required? && properties[field.name].blank?
+          errors.add field.name, "must not be blank"
+        end
+      end
+    end
+  end
+{% endhighlight %}
+
+- - -  
+#总结
+
+经过以上步骤，基本就完成了整个动态表单的创建。整个过程可以购买RailsCasts Pro进行观看，链接可以点击：[403-dynamic-forms](http://railscasts.com/episodes/403-dynamic-forms)。
+
+根据RailsCasts的说明完成后，其实发现还是有很多需要改进的地方的，其中有下面两点需要注意：
+
+*   上面方式创建表单，尚不支持上传文件的功能
+*   用Rails提供的hash形式保存数据，最大的弊端是一个搜索的问题，用Ruby进行过滤要比SQL的查询效率差很多
