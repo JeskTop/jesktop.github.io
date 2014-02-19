@@ -5,8 +5,9 @@ date: 2014-01-18 17:27:31
 disqus: y
 ---
 
-#CSS
 - - -
+#CSS
+
 *   ##[h5bp / Effeckt.css](https://github.com/h5bp/Effeckt.css "Effeckt")  
 使用CSS写的高性能转换和动画  
 Demo: [查看](http://h5bp.github.io/Effeckt.css/dist/)
@@ -82,8 +83,9 @@ Demo: [查看](http://tobiasahlin.com/spinkit/)
 A CSS preprocessor that acts like a polyfill for future versions of the spec.    
 Demo: [查看](http://www.myth.io/)
 
-#Ruby or Rails
 - - -
+#Ruby or Rails
+
 *   ##[binarylogic / searchlogic](https://github.com/binarylogic/searchlogic "searchlogic")    
 提供一种更便利清晰的搜索方式
 
@@ -139,8 +141,9 @@ Rails engine for client-side local time
 *   ##[sferik / t](https://github.com/sferik/t "t")    
 A command-line power tool for Twitter.     
 
-#Emberjs
 - - -
+#Emberjs
+
 *   ##[GroupTalent / adminjs](https://github.com/GroupTalent/adminjs "adminjs")  
 基于emberjs的一个多功能table，可是显示搜索，排序等功能。    
 Demo: [查看](http://adminjs.com/)
@@ -151,49 +154,58 @@ emberjs的登录验证
 *   ##[ghempton / ember-script](https://github.com/ghempton/ember-script "ember-script")  
 Ember-infused CoffeeScript    
 
-#Alfred
 - - -
+#Alfred
+
 *   ##[zenorocha / alfred-workflows](https://github.com/zenorocha/alfred-workflows "alfred-workflows")    
 神器Alfred：A collection of Alfred 2 workflows that will rock your world.
 
-#Git
 - - -
+#Git
+
 *   ##[github / gitignore](https://github.com/github/gitignore "gitignore")    
 A collection of useful .gitignore templates
 
-#收集&推荐优秀的 Apps (Mac OS & iOS)
 - - -
+#收集&推荐优秀的 Apps (Mac OS & iOS)
+
 *   ##[hzlzh / Best-App](https://github.com/hzlzh/Best-App "Best-App")    
 
-#API Documentation Browser
 - - -
+#API Documentation Browser
+
 *   ##[Thibaut / devdocs](https://github.com/Thibaut/devdocs "devdocs")    
 API文档： [查看](http://devdocs.io/)    
 
-#Command line HTTP client
 - - -
+#Command line HTTP client
+
 *   ##[jkbr / httpie](https://github.com/jkbr/httpie "httpie")    
 HTTPie is a CLI, cURL-like tool for humans.     
 
-#HTML5 editor
 - - -
+#HTML5 editor
+
 *   ##[jawerty / Hyro](https://github.com/jawerty/Hyro "Hyro")    
 A real-time desktop HTML5 editor -- view your html while you code it.       
 Demo: [查看](http://jawerty.github.io/Hyro/)    
 
-#开源项目
 - - -
+#开源项目
+
 *   ##[maccman / monocle](https://github.com/maccman/monocle "monocle")    
 Link and news sharing       
 Demo: [查看](http://monocle.io/)    
 
-#html email template
 - - -
+#html email template
+
 *   ##[maccman / monocle](https://github.com/leemunroe/html-email-template "html-email-template")    
 leemunroe / html-email-template       
 
-#Markdown
 - - -
+#Markdown
+
 *   ##[vmg / redcarpet](https://github.com/vmg/redcarpet "redcarpet")    
 The safe Markdown parser, reloaded.  Markdown解析工具    
 

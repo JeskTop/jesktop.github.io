@@ -5,8 +5,9 @@ date: 2014-01-18 17:28:40
 disqus: y
 ---
 
-#Javascript
 - - -
+#Javascript
+
 *   ##[stripe / shop](https://github.com/stripe/shop "shop")  
 Single-page shop     
 Demo: [查看](https://shop-demo.parseapp.com/)
