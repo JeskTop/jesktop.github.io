@@ -8,4 +8,6 @@
 /.bundle
 
 # Ignore jekyll site
-/_site
+_site/
+.sass-cache
+.ruby-version
