@@ -14,7 +14,7 @@ group :development do
   gem 'capistrano-rvm'
 end
 
-gem 'puma'
+gem 'puma'    #使用puma做server
 {% endhighlight %}
 
 ##编辑配置文件
@@ -69,7 +69,7 @@ namespace :deploy do
 end
 {% endhighlight %}
 
-*   这里我们只使用production环境，所以只对`config/deploy/production.rb`介绍，这是cap3的一个特别的地方，它把需要不同环境进行配置的地方均分开放在deploy文件内，并且部署命令改为`cap 环境名称 deploy`，这样分开来后，这个部署配置文件变得更清晰：
+*   这里我们只使用production环境，所以只对`config/deploy/production.rb`介绍，这是cap3的一个特别的地方，它把不同环境的部署方案分开放在deploy文件内，并且部署命令改为`cap 环境名称 deploy`，这样分开来后，整个部署配置文件结构变得非常清晰：
 
 {% highlight ruby %}
 role :app, %w{deploy@example.com}     #服务器地址
@@ -103,3 +103,5 @@ set :puma_preload_app, true
 ##总结
 
 使用`capistrano3`后，发现比2方便了很多，而且整个结构非常清晰，配合puma使用非常方便。上面介绍的是非常简单的，因为还没有涉及自己写task，所以以后应该会写一个专门介绍如何写部署task的文章。
+
+如果希望把自己的项目从capistrano2升级到3的话，可以参考 [Capistrano 3 Upgrade Guide](https://semaphoreapp.com/blog/2013/11/26/capistrano-3-upgrade-guide.html)。
