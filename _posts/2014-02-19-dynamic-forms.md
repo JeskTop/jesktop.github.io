@@ -41,10 +41,10 @@ ProductField的字段分别存入名称(name)、输入框的类型(field_type)�
 我们需要在创建ProductType的同时添加ProductField，需要设置ProductField可通过ProductType进行添加，ProductType的Model代码如下：
 
 {% highlight ruby %}
-  class ProductType < ActiveRecord::Base
-    has_many :fields, class_name: "ProductField"
-    accepts_nested_attributes_for :fields, allow_destroy: true
-  end
+class ProductType < ActiveRecord::Base
+  has_many :fields, class_name: "ProductField"
+  accepts_nested_attributes_for :fields, allow_destroy: true
+end
 {% endhighlight %}
 
 通过`accepts_nested_attributes_for`进行设置，可以点击查看文档[accepts_nested_attributes_for](http://api.rubyonrails.org/classes/ActiveRecord/NestedAttributes/ClassMethods.html#method-i-accepts_nested_attributes_for)。
@@ -57,26 +57,26 @@ ProductField的字段分别存入名称(name)、输入框的类型(field_type)�
 
   新建`_field_fields.html.erb`，加入ProductField需要添加的信息：
     
-{% highlight html %}
-  <fieldset>
-    <%= f.select :field_type, %w[text_field check_box] %>  <!-- 提供添加"text_field"和"check_box"两种选择 -->
-    <%= f.text_field :name, placeholder: "field_name" %>
-    <%= f.check_box :required %> <%= f.label :required %>
-    <%= f.hidden_field :_destroy %>     <!-- accepts_nested_attributes_for的删除操作需要提供"_destroy" -->
-    <%= link_to "[remove]", "#", class: "remove_fields" %>
-  </fieldset>
+{% highlight ERB %}
+<fieldset>
+  <%= f.select :field_type, %w[text_field check_box] %>  <!-- 提供添加"text_field"和"check_box"两种选择 -->
+  <%= f.text_field :name, placeholder: "field_name" %>
+  <%= f.check_box :required %> <%= f.label :required %>
+  <%= f.hidden_field :_destroy %>     <!-- accepts_nested_attributes_for的删除操作需要提供"_destroy" -->
+  <%= link_to "[remove]", "#", class: "remove_fields" %>
+</fieldset>
 {% endhighlight %}
 
   在`_form.html.erb`中加入`_field_fields.html.erb`：
     
-{% highlight html %}
-  <%= form_for(@product_type) do |f| %>
-    ...
-    <%= f.fields_for :fields do |builder| %>
-      <%= render 'field_fields', f: builder %>
-    <% end %>
-    ...
+{% highlight ERB %}
+<%= form_for(@product_type) do |f| %>
+  ...
+  <%= f.fields_for :fields do |builder| %>
+    <%= render 'field_fields', f: builder %>
   <% end %>
+  ...
+<% end %>
 {% endhighlight %}
         
 *   添加动态添加和删除_field_fields的操作：
@@ -84,47 +84,47 @@ ProductField的字段分别存入名称(name)、输入框的类型(field_type)�
   添加一个helper进行动态操作：
     
 {% highlight ruby %}
-  def link_to_add_fields(name, f, association)
-    new_object = f.object.send(association).klass.new     #相当于ProductField.new
-    id = new_object.object_id
-    fields = f.fields_for(association, new_object, child_index: id) do |builder|  
-      render(association.to_s.singularize + "_fields", f: builder)
-    end
-    link_to(name, '#', class: "add_fields", data: {id: id, fields: fields.gsub("\n", "")})  #把需要添加的html加入该链接的data-fields中
+def link_to_add_fields(name, f, association)
+  new_object = f.object.send(association).klass.new     #相当于ProductField.new
+  id = new_object.object_id
+  fields = f.fields_for(association, new_object, child_index: id) do |builder|  
+    render(association.to_s.singularize + "_fields", f: builder)
   end
+  link_to(name, '#', class: "add_fields", data: {id: id, fields: fields.gsub("\n", "")})  #把需要添加的html加入该链接的data-fields中
+end
 {% endhighlight %}
         
   [fields_for文档](http://api.rubyonrails.org/classes/ActionView/Helpers/FormHelper.html#method-i-fields_for)
     
   在`_form.html.erb`添加link_to_add_fields如：
   
-{% highlight html %}
-  <%= link_to_add_fields "Add Field", f, :fields %>  
+{% highlight ERB %}
+<%= link_to_add_fields "Add Field", f, :fields %>  
 {% endhighlight %}
         
   使用coffeescript对ProductField进行异步的添加和删除操作：
     
 {% highlight coffeescript %}
-  $(document).on 'click', 'form .remove_fields', (event) ->    #把_destroy设置为1，并且隐藏fieldset
-    $(this).prev('input[type=hidden]').val('1')
-    $(this).closest('fieldset').hide()
-    event.preventDefault()
-  
-  $(document).on 'click', 'form .add_fields', (event) ->     #把data-fields的信息，插入form中
-    time = new Date().getTime() 
-    regexp = new RegExp($(this).data('id'), 'g')
-    $(this).before($(this).data('fields').replace(regexp, time))
-    event.preventDefault()
+$(document).on 'click', 'form .remove_fields', (event) ->    #把_destroy设置为1，并且隐藏fieldset
+  $(this).prev('input[type=hidden]').val('1')
+  $(this).closest('fieldset').hide()
+  event.preventDefault()
+
+$(document).on 'click', 'form .add_fields', (event) ->     #把data-fields的信息，插入form中
+  time = new Date().getTime() 
+  regexp = new RegExp($(this).data('id'), 'g')
+  $(this).before($(this).data('fields').replace(regexp, time))
+  event.preventDefault()
 {% endhighlight %}
           
 *   controller中加入嵌套表单的参数保护（白名单）：
 
 {% highlight ruby %}
-  def product_type_params
-    params.require(:product_type).permit(:name).tap do |whitelisted|
-      whitelisted[:fields_attributes] = params[:product_type][:fields_attributes]
-    end
+def product_type_params
+  params.require(:product_type).permit(:name).tap do |whitelisted|
+    whitelisted[:fields_attributes] = params[:product_type][:fields_attributes]
   end
+end
 {% endhighlight %}
  
 - - -       
@@ -133,40 +133,40 @@ ProductField的字段分别存入名称(name)、输入框的类型(field_type)�
 ##创建Product时，选择ProductType类型
 在创建Product的form中，可以根据ProductType的id进行生成form的类型，所以添加一个`form_tag`：
 
-{% highlight html %}
-  <%= form_tag new_product_path, method: :get do %>
-    <%= select_tag :product_type_id, options_from_collection_for_select(ProductType.all, :id, :name) %>
-    <%= submit_tag "New Product" %>
-  <% end %>
- {% endhighlight %}
+{% highlight ERB %}
+<%= form_tag new_product_path, method: :get do %>
+  <%= select_tag :product_type_id, options_from_collection_for_select(ProductType.all, :id, :name) %>
+  <%= submit_tag "New Product" %>
+<% end %>
+{% endhighlight %}
  
 ##在Product的_form中，根据选择的ProductType生成表单
 在`_form.html.erb`中添加：
 
-{% highlight html %}
-  <%= f.fields_for :properties, OpenStruct.new(@product.properties) do |builder| %>
-    <% @product.product_type.fields.each do |field| %>
-      <%= render "products/fields/#{field.field_type}", field: field, f: builder %>
-    <% end %>
+{% highlight ERB %}
+<%= f.fields_for :properties, OpenStruct.new(@product.properties) do |builder| %>
+  <% @product.product_type.fields.each do |field| %>
+    <%= render "products/fields/#{field.field_type}", field: field, f: builder %>
   <% end %>
+<% end %>
 {% endhighlight %}
 
 创建`products/fields/_check_box.html.erb`：
 
-{% highlight html %}
-  <div class="field">
-    <%= f.check_box field.name %>
-    <%= f.label field.name %>
-  </div>
+{% highlight ERB %}
+<div class="field">
+  <%= f.check_box field.name %>
+  <%= f.label field.name %>
+</div>
 {% endhighlight %}
 
 创建`products/fields/_text_field.html.erb`：
 
-{% highlight html %}
-  <div class="field">
-    <%= f.label field.name %><br />
-    <%= f.text_field field.name %>
-  </div>
+{% highlight ERB %}
+<div class="field">
+  <%= f.label field.name %><br />
+  <%= f.text_field field.name %>
+</div>
 {% endhighlight %}
 
 > About OpenStruct   
@@ -179,36 +179,36 @@ ProductField的字段分别存入名称(name)、输入框的类型(field_type)�
 在controller中，new方法下先建立product和product_type的关系：
 
 {% highlight ruby %}
-  def new
-    @product = Product.new(product_type_id: params[:product_type_id])
-  end
+def new
+  @product = Product.new(product_type_id: params[:product_type_id])
+end
 {% endhighlight %}
 
 并且hidden在form中，create时一同创建：
 
-{% highlight html %}
-  <%= f.hidden_field :product_type_id %>
+{% highlight ERB %}
+<%= f.hidden_field :product_type_id %>
 {% endhighlight %}
 
 ##controller中加入嵌套表单的参数保护（白名单）
 
 {% highlight ruby %}
-  def product_params
-    params.require(:product).permit(:name, :price, :product_type_id).tap do |whitelisted|
-      whitelisted[:properties] = params[:product][:properties]
-    end
+def product_params
+  params.require(:product).permit(:name, :price, :product_type_id).tap do |whitelisted|
+    whitelisted[:properties] = params[:product][:properties]
   end
+end
 {% endhighlight %}
 
 ##在Product的show页面中，显示product动态表里的信息：
 
-{% highlight html %}
-  <% @product.properties.each do |name, value| %>
-    <p>
-      <b><%= name.humanize %>:</b>
-      <%= value %>
-    </p>
-  <% end %>
+{% highlight ERB %}
+<% @product.properties.each do |name, value| %>
+  <p>
+    <b><%= name.humanize %>:</b>
+    <%= value %>
+  </p>
+<% end %>
 {% endhighlight %}
 
 - - -       
@@ -218,19 +218,19 @@ ProductField的字段分别存入名称(name)、输入框的类型(field_type)�
 
 
 {% highlight ruby %}
-  class Product < ActiveRecord::Base
-    ...
+class Product < ActiveRecord::Base
+  ...
 
-    validate :validate_properties
-    
-    def validate_properties
-      product_type.fields.each do |field|
-        if field.required? && properties[field.name].blank?
-          errors.add field.name, "must not be blank"
-        end
+  validate :validate_properties
+  
+  def validate_properties
+    product_type.fields.each do |field|
+      if field.required? && properties[field.name].blank?
+        errors.add field.name, "must not be blank"
       end
     end
   end
+end
 {% endhighlight %}
 
 - - -  
