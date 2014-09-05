@@ -11,7 +11,7 @@ disqus: y
 # config/application.rb   
 config.exceptions_app = self.routes
 {% endhighlight %}
-加入配置之后，避免在读取到/404, /422, /500时，仍然从public中寻找，建议删除public下的这三个html文件。
+加入配置之后，避免在读取到`/404`, `/422`, `/500`时，仍然从public中寻找，建议删除public下的这三个html文件。
 
 ## 加入controler，view和route
 因为public的对应错误信息页面删除了，所以需要重新定义错误信息的Route：
@@ -37,7 +37,7 @@ protected
  
 end
 {% endhighlight %}
-这样就会根据错误的提示，去render对应的模板，如出现404错误，则去寻找errors/404.html.erb，所以加入相应的404.html.erb, 422.html.erb, 500.html.erb。参考：
+这样就会根据错误的提示，去render对应的模板，如出现404错误，则去寻找`errors/404.html.erb`，所以加入相应的`404.html.erb`, `422.html.erb`, `500.html.erb`。参考：
 {% highlight ruby %}
 # app/views/errors/404.html.haml
 %h1 404 - Not Found
@@ -58,8 +58,10 @@ config.consider_all_requests_local = false
 "application's log file and/or the web server's log file to find out what " \
 "went wrong."
 {% endhighlight %}
-这个问题就像刚刚上面说的，是因为你的错误提示信息页面出错了，无法展现404页面了，所以就调用了Rails下的一个500错误提示信息，源码位置在：https://github.com/rails/rails/blob/4-0-stable/actionpack/lib/action_dispatch/middleware/show_exceptions.rb#L18-L22
+这个问题就像刚刚上面说的，是因为你的错误提示信息页面出错了，无法展现404页面了，所以就调用了Rails下的一个500错误提示信息，源码位置在：[show_exceptions.rb#L18-L22](https://github.com/rails/rails/blob/4-0-stable/actionpack/lib/action_dispatch/middleware/show_exceptions.rb#L18-L22)。
 所以，如果出现了这样的错误，需要仔细看看自己的错误信息页面是否在哪里出了问题。
+
+*我在一个开源项目里，也加入了此功能，可以浏览对应的commit，位置在：[Merge branch 'dynamic_error_pages'](https://github.com/minnowlab/giggle/commit/62c7d6e15f9c14d9d111a6a25ceb841b33a7db24)。
 
 参考：
 [DYNAMIC ERROR PAGES IN RAILS](http://wearestac.com/blog/dynamic-error-pages-in-rails)。
