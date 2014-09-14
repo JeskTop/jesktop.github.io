@@ -34,7 +34,7 @@ disqus: y
   <%= f.submit "Create" %>
 <% end %>
 {% endhighlight %} 
-所以对于之前如何添加`<input type="reset"/> `的问题来说，答案已经很清晰了。当然如何解决这个问题并不是主要想讨论的事情，关键的一点是非常多的初学者对`Form_for`的理解误区，他们普遍觉得在`Form_for`里写input是应该像这样的：`<%= f.text_field :title %>`，而不是`<input id="article_title" name="article[title]" type="text" />`这样的，关键是忽略了`Form_for`主要责任是生成HTML而已。所以特别需要记住的一点是，就算是在Rails里，HTTP的表单请求依然是依赖HTML的`<form></form>`标签，而不是Rails的`Form_for`Helper，而`Form_for`是用于生成`<form></form>`。所以这个问题的产生其实是源自于对HTML本身的不够熟悉。 
+所以对于之前如何添加`<input type="reset"/> `的问题来说，答案已经很清晰了。当然如何解决这个问题并不是主要想讨论的事情，关键的一点是非常多的初学者对`Form_for`的理解误区，他们普遍觉得在`Form_for`里写input是应该像这样的：`<%= f.text_field :title %>`，而不是`<input id="article_title" name="article[title]" type="text"/>`，关键是忽略了`Form_for`主要责任是生成HTML而已。所以特别需要记住的一点是，就算是在Rails里，HTTP的表单请求依然是依赖HTML的`<form></form>`标签，而不是Rails的`Form_for`Helper，而`Form_for`是用于生成`<form></form>`。所以这个问题的产生其实是源自于对HTML本身的不够熟悉。 
 
 ## Form_for与Form_tag
 好了，那说完以上的问题后，在说说那`Form_for`和`Form_tag`的区别是什么？其实它们的区别就是生成的HTML不一样，而有非常一大部分的初学者会认为他们的区别是一个用于创建和更新用，对于搜索就使用`Form_tag`。初学者的观点也不能说不对，但是如果要了解为什么需要在不同的情况使用不同的Helper还是需要了解一下它们的区别。那它们生成的HTML究竟有什么不一样呢？  
