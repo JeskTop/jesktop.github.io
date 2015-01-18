@@ -85,4 +85,7 @@ if sns_info.is_ok?
   user.openid = sns_info.result[:openid]
 end
 {% endhighlight %}
-只要这样，当用户通过该页面登录成功后，就可以把openid和user关联起来，如果往后有消息需要推送给用户的话就相当方便了，调用微信对应的接口加上openid，就可以发送消息到对应的微信用户上了。  
+只要这样，当用户通过该页面登录成功后，就可以把openid和user关联起来，如果往后有消息需要推送给用户的话就相当方便了，调用微信对应的接口加上openid，就可以发送消息到对应的微信用户上了。 
+
+以上就是这些时间里对微信公众帐号开发的一些看法和认识，都是一些比较简单的介绍。下面在介绍大家开发时记得使用微信提供的沙箱进行调试：
+[http://mp.weixin.qq.com/debug/cgi-bin/sandbox?t=sandbox/login](http://mp.weixin.qq.com/debug/cgi-bin/sandbox?t=sandbox/login)
