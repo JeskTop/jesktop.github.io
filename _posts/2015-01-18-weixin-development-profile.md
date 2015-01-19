@@ -30,9 +30,9 @@ disqus: y
 在使用高级接口时，我们使用`gem 'weixin_authorize'`。高级接口和基础接口有什么不一样呢？我觉得最大的区别在于高级接口基本上都是服务器端主动发起的请求，因为是服务器端主动发起的请求，所以每次需要带上`access_token`来提供微信验证此信息是否是服务器端发送的。所以我们先来看看`access_token`是如何获得的。
 
 ### 获取access_token
-```
+{% highlight html %}
 access_token是公众号的全局唯一票据，公众号调用各接口时都需使用access_token。开发者需要进行妥善保存。access_token的存储至少要保留512个字符空间。access_token的有效期目前为2个小时，需定时刷新，重复获取将导致上次获取的access_token失效。
-```
+{% endhighlight %}
 因为`access_token`是会失效的，所以`gem 'weixin_authorize'`中使用Redis来存储`access_token`是一个不错的方式，根据文档配置，然后通过：
 {% highlight ruby %}
 $client ||= WeixinAuthorize::Client.new(ENV["APPID"], ENV["APPSECRET"])
@@ -64,19 +64,19 @@ end
 #### 请求授权页面
 在微信菜单中的“登录”按钮跳到的页面也是一个网站的登录页面，但是他们不一样的地方是，这里需要微信做一个授权，也就是菜单中的“登录”按钮指向的链接是这样的： 
  
-```
+{% highlight html %}
 https://open.weixin.qq.com/connect/oauth2/authorize?appid=APPID&redirect_uri=REDIRECT_URI&response_type=code&scope=SCOPE&state=STATE#wechat_redirect
-```
+{% endhighlight %}
 里面两个必须的参数是APPID和REDIRECT_URI，其中REDIRECT_URI是需要跳转的链接地址。为什么需要这样的地址呢？   
 因为随着微信的REDIRECT_URI，去到登录页面时会带着一个code值，而我们需要用code来获取用户的openid。
 
-```
+{% highlight html %}
 code说明 ：
 code作为换取access_token的票据，每次用户授权带上的code将不一样，code只能使用一次，5分钟未被使用自动过期。
 
 openid说明：
 普通用户的标识，对当前公众号唯一
-```
+{% endhighlight %}
 有了code值，就可以立刻向微信获取用户的openid值了：
 
 {% highlight ruby %}
