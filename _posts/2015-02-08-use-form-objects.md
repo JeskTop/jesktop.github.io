@@ -1,6 +1,6 @@
 ---
 layout: post
-title: 使用Form Objects处理复杂的表单结构
+title: 使用Form Objects处理结构复杂的表单
 date: 2015-02-08 19:28:40
 disqus: y
 ---
@@ -32,6 +32,8 @@ Class ProductColor  # 产品颜色
   has_many :products
 end
 {% endhighlight %}
+
+![](https://ruby-china-files.b0.upaiyun.com/photo/2015/bf917af736056bfd93c59e6904f941d5.png)
 
 Form里的操作是，当我创建一个Product时，需要同时添加多个Product Price（销售价和成本价），和关联一个Product Color（如果颜色存在，则直接进行关联，不存在就重新创建）。  
 所以我们需要设计四个input：name, sell_price, cost_price, color；别看就这么简单的四个玩意，其实是同时涉及三张表的操作哦。
