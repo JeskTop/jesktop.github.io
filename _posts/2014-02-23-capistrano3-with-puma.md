@@ -45,27 +45,28 @@ Dir.glob('lib/capistrano/tasks/*.cap').each { |r| import r }
 *   然后关键的一些task都是写在`config/deploy.rb`里，假设我们的项目名字叫example：
 
 {% highlight ruby %}
-lock '3.1.0'
+lock '3.4.0'
 
 set :application, 'example'      #项目名称
 set :repo_url, 'git@example.com:example.git'    #git仓库的存放地址
 
-set :linked_files, %w{config/database.yml}       #需要做链接的文件，一般database.yml和部分配置文件
-set :linked_dirs, %w{bin log tmp/pids tmp/cache tmp/sockets vendor/bundle public/system}
+set :linked_files, fetch(:linked_files, []).push('config/database.yml', 'config/secrets.yml')       #需要做链接的文件，一般database.yml和部分配置文件
+set :linked_dirs, fetch(:linked_dirs, []).push('log', 'tmp/pids', 'tmp/cache', 'tmp/sockets', 'vendor/bundle', 'public/system')
 
 namespace :deploy do
-  desc 'Restart application'
-  task :restart do
-    on roles(:app), in: :sequence, wait: 5 do
-    end
-  end
-  after :restart, :'puma:restart'    #添加此项重启puma
+
+  after :restart, :'puma:restart'
   after :publishing, :restart
 
   after :restart, :clear_cache do
     on roles(:web), in: :groups, limit: 3, wait: 10 do
+      # Here we can do anything such as:
+      # within release_path do
+      #   execute :rake, 'cache:clear'
+      # end
     end
   end
+
 end
 {% endhighlight %}
 
