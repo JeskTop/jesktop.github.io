@@ -154,3 +154,14 @@ host    all             all             ::1/128                 md5
 {% highlight html %}
 local   all             dbuser                                md5
 {% endhighlight %}
+
+## 安装Nodejs
+因为Ubuntu源里的Nodejs版本为0.10.x，而这里我们需要安装最新的版本0.12.x：
+
+{% highlight shell %}
+# Note the new setup script name for Node.js v0.12
+curl -sL https://deb.nodesource.com/setup_0.12 | sudo bash -
+
+# Then install with:
+sudo apt-get install -y nodejs
+{% endhighlight %}
