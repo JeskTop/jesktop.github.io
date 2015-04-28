@@ -15,9 +15,9 @@ links:
     url:          mailto:frayay@gmail.com
   - name:         GitHub
     url:          http://github.com/jesktop
-
 pygments:         true
 permalink:        pretty
-markdown:         rdiscount
-rdiscount:
-  extensions:     [smart]
+markdown:         redcarpet
+redcarpet:
+  extensions:
+    - smart
