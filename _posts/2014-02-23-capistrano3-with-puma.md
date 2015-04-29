@@ -5,6 +5,7 @@ date: 2014-02-23 00:33:11
 disqus: y
 ---
 
+- - -
 ##添加需要使用到的gem
 
 {% highlight ruby %}

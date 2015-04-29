@@ -5,6 +5,7 @@ date: 2015-04-26 16:38:40
 disqus: y
 ---
 
+- - -
 参考原文：[Passenger/Nginx/Ubuntu/MySQL详尽部署Rails 4.2.1/Ruby2.2.2](http://www.cnblogs.com/jesktop/archive/2012/02/23/2364674.html)
 
 上面的原文是我早之前自己配置环境时所写的文章，一直都有在更新。现在由于现在我从MySQL迁移到PostgreSQL了，而且自己最近在搭建一个服务器，所以把搭建起来的过程记录下来。

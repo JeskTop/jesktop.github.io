@@ -5,6 +5,7 @@ date: 2015-04-18 19:28:40
 disqus: y
 ---
 
+- - -
 [Mailgun](https://mailgun.com/)是一个第三方的邮件发送服务，文档非常的详细，功能也非常强大。在使用Mailgun之前，因为用户量不大，所以一直用Gmail的SMTP进行发送邮件，但是这不是一个长久的办法，所以我们就使用Mailgun作为代替的方案。
 
 参考了[Tower](https://tower.im/)和[Github](https://github.com/)的邮件服务，我们从原来的Gmail成功迁移到了Mailgun，并且添加了大量新的功能，例如通过回复邮件在系统中创建留言等功能。新的功能使用Mailgun完成都非常方便，可见Mailgun的功能非常的强大，在这篇文章中，主要介绍如何在项目中配置Mailgun，别的更强大的功能就等到往后的文章在做介绍啦。

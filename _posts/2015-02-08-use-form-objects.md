@@ -5,6 +5,7 @@ date: 2015-02-08 19:28:40
 disqus: y
 ---
 
+- - -
 参考：[RailsCasts 416-form-objects](http://railscasts.com/episodes/416-form-objects)   
 自从使用Form Objects处理复杂的表单后，我就不想在考虑使用Rails带的那套方法了。  
 原来的方法是，如果一个Form需要同时处理两个Model的数据时，就需要考虑使用`accepts_nested_attributes_for`，来建立数据间的关系。但是如果同时需要处理三个或三个以上的Model数据时，就会变得很混乱，form页面需要各种嵌套，然后model层需要小心翼翼的设置`accepts_nested_attributes_for`。  

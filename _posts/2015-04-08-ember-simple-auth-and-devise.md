@@ -5,6 +5,7 @@ date: 2015-04-08 09:28:40
 disqus: y
 ---
 
+- - -
 参考：[Ember Simple Auth Devise](https://github.com/simplabs/ember-simple-auth/tree/master/packages/ember-simple-auth-devise)  
 
 文档里对如何使用`ember-simple-auth`结合`devise`是讲得相当清楚了，所以我这里只是简单的记录在项目中使用的过程。
