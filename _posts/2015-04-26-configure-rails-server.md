@@ -156,6 +156,23 @@ host    all             all             ::1/128                 md5
 local   all             dbuser                                md5
 {% endhighlight %}
 
+重启postgresql
+{% highlight shell %}
+sudo service postgresql restart
+{% endhighlight %}
+
+### 数据库的备份与恢复
+数据库的备份，下面的命令是mac下安装了pgAdmin3的，如果是Ubuntu，则使用数据库的用户直接调用pg_dump就可以了：
+{% highlight shell %}
+/Applications/pgAdmin3.app/Contents/SharedSupport/pg_dump --host SERVER --port 5432 --username "USER" --password  --format custom --blobs --verbose --file "/Users/USER/Desktop/DATABASE.backup" "DATABASE"
+{% endhighlight %}
+
+数据库的恢复：
+{% highlight shell %}
+scp /Users/USER/Desktop/DATABASE.backup USER@server.com:~/   #! 如果备份文件在本地，可以先scp上去
+pg_restore --host localhost --port 5432 --username "USER" --dbname "DATABASE" --password  --verbose "/home/USER/DATABASE.backup"
+{% endhighlight %}
+
 ## 安装Nodejs
 因为Ubuntu源里的Nodejs版本为0.10.x，而这里我们需要安装最新的版本0.12.x：
 
