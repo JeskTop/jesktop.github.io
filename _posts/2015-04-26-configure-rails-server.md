@@ -17,7 +17,7 @@ Ubuntu版本：14.04.2 LTS
 Ruby版本：2.2.2
 Rails版本：4.2.1
 PostgreSQL版本：9.4.1
-Nginx版本：1.8.0
+Nginx版本：1.9.0
 {% endhighlight %}
 
 ## 更新源和安装依赖包
@@ -182,4 +182,29 @@ curl -sL https://deb.nodesource.com/setup_0.12 | sudo bash -
 
 # Then install with:
 sudo apt-get install -y nodejs
+{% endhighlight %}
+
+## 安装新版本Nginx
+参考：
+[Install latest version of Nginx on Ubuntu](https://bjornjohansen.no/install-latest-version-of-nginx-on-ubuntu)
+
+### 添加nginx的signing key
+{% highlight html %}
+curl http://nginx.org/keys/nginx_signing.key | apt-key add -
+{% endhighlight %}
+
+### 添加apt sources
+{% highlight html %}
+echo -e "deb http://nginx.org/packages/mainline/ubuntu/ `lsb_release -cs` nginx\ndeb-src http://nginx.org/packages/mainline/ubuntu/ `lsb_release -cs` nginx" > /etc/apt/sources.list.d/nginx.list
+{% endhighlight %}
+
+### 安装新版本的Nginx
+{% highlight html %}
+apt-get update
+apt-get install nginx
+{% endhighlight %}
+
+### 重启Nginx
+{% highlight html %}
+nginx -s reload
 {% endhighlight %}
