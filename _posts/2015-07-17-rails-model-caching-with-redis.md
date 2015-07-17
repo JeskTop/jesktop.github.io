@@ -1,6 +1,6 @@
 ---
 layout: post
-title: [译]使用Redis处理Rails Model缓存
+title: 使用Redis处理Rails Model缓存
 date: 2015-07-17 10:02:30
 disqus: y
 ---
