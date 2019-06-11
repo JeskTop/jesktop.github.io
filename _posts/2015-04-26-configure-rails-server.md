@@ -14,7 +14,7 @@ disqus: y
 服务器提供商：Linode
 修改时间：2015-04-26
 Ubuntu版本：14.04.2 LTS
-Ruby版本：2.2.2
+Ruby版本：2.6.3
 Rails版本：4.2.3
 PostgreSQL版本：9.4.1
 Nginx版本：1.9.0
@@ -57,12 +57,12 @@ rvm –v
 
 ### 安装Ruby
 {% highlight html %}
-rvm install 2.2.2  #! 2.2.2为ruby的版本
+rvm install 2.6.3  #! 2.6.3为ruby的版本
 {% endhighlight %}
 
 安装完成后，需要设置默认的Ruby版本：
 {% highlight html %}
-rvm 2.2.2 --default   #! 设置2.2.2为默认的版本
+rvm 2.6.3 --default   #! 设置2.2.2为默认的版本
 ruby –v               #! 查看当前ruby的版本
 {% endhighlight %}
 
