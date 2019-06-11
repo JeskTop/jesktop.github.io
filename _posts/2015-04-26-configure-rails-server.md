@@ -31,7 +31,7 @@ sudo dpkg-reconfigure tzdata   #! 选择Asia，然后再选择自己所在的时
 
 ### 安装所需的linux包
 {% highlight html %}
-sudo apt-get install build-essential bison openssl libreadline6 libreadline6-dev curl git-core zlib1g zlib1g-dev libssl-dev libyaml-dev  libxml2-dev libxslt-dev autoconf libc6-dev zlib1g-dev libssl-dev build-essential curl git-core libc6-dev g++ gcc
+sudo apt-get install build-essential bison openssl libreadline-dev curl git zlib1g zlib1g-dev libssl-dev libyaml-dev  libxml2-dev libxslt1-dev autoconf libc6-dev zlib1g-dev libssl-dev build-essential curl libc6-dev g++ gcc
 {% endhighlight %}
 
 ### 添加一个rails用户和一个passenger用户组
