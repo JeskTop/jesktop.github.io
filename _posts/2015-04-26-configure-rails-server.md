@@ -174,11 +174,12 @@ pg_restore --host localhost --port 5432 --username "USER" --dbname "DATABASE" --
 {% endhighlight %}
 
 ## 安装Nodejs
-因为Ubuntu源里的Nodejs版本为0.10.x，而这里我们需要安装最新的版本0.12.x：
+因为Ubuntu源里的Nodejs版本为0.10.x，而这里我们需要安装最新的版本v13.x：
+安装版本方式参考：https://github.com/nodesource/distributions
 
 {% highlight html %}
 # Note the new setup script name for Node.js v0.12
-curl -sL https://deb.nodesource.com/setup_0.12 | sudo bash -
+curl -sL https://deb.nodesource.com/setup_13.x | sudo -E bash -
 
 # Then install with:
 sudo apt-get install -y nodejs
